@@ -25,14 +25,7 @@ export function ComplaintProvider({ children }) {
         console.error("Failed to parse user", e);
       }
     }
-    return {
-      name: "Ramesh Kumar",
-      phone: "+91 98765 43210",
-      citizenId: "CIT-IND-000124",
-      ward: "Ward 5",
-      village: "Kalyanpur Gram Panchayat",
-      role: "citizen" // 'citizen' or 'admin'
-    };
+    return null;
   });
 
   // Selected spoken dialect / language
@@ -75,7 +68,11 @@ export function ComplaintProvider({ children }) {
 
   // Persist user
   useEffect(() => {
-    localStorage.setItem('awaaz_user', JSON.stringify(currentUser));
+    if (currentUser) {
+      localStorage.setItem('awaaz_user', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('awaaz_user');
+    }
   }, [currentUser]);
 
   // Compute live admin statistics dynamically

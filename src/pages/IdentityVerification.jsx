@@ -1,55 +1,40 @@
-import React, { useState, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { CheckCircle2, ShieldCheck, ArrowRight, Phone, KeyRound, Sparkles } from 'lucide-react';
+import React, { useState } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { CheckCircle2, ArrowLeft, User, Lock, Mail, ArrowRight } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useComplaints } from '../context/ComplaintContext';
+import { t } from '../utils/translations';
 
 export default function IdentityVerification() {
   const navigate = useNavigate();
-  const { setCurrentUser } = useComplaints();
+  const location = useLocation();
+  const { setCurrentUser, selectedLanguage } = useComplaints();
 
-  const [mobileNumber, setMobileNumber] = useState('9876543210');
-  const [otpSent, setOtpSent] = useState(false);
-  const [otp, setOtp] = useState(['1', '2', '3', '4', '5', '6']);
+  const searchParams = new URLSearchParams(location.search);
+  const initialRole = searchParams.get('role') === 'admin' ? 'admin' : 'citizen';
+
+  const [registerRole, setRegisterRole] = useState(initialRole);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isVerified, setIsVerified] = useState(false);
-  const inputRefs = useRef([]);
 
-  const handleSendOtp = (e) => {
+  const handleRegister = (e) => {
     e.preventDefault();
-    if (mobileNumber.length >= 10) {
-      setOtpSent(true);
-    }
-  };
+    if (name.length < 2 || email.length < 5 || password.length < 4) return;
+    
+    const users = JSON.parse(localStorage.getItem('awaaz_users')) || {};
+    users[email] = { name, email, password, role: registerRole };
+    localStorage.setItem('awaaz_users', JSON.stringify(users));
 
-  const handleOtpChange = (index, value) => {
-    if (value.length > 1) {
-      value = value.charAt(value.length - 1);
-    }
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
-
-    // Auto-advance
-    if (value && index < 5) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleKeyDown = (index, e) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
-  };
-
-  const handleVerify = () => {
     setIsVerified(true);
     setCurrentUser({
-      name: "Ramesh Kumar",
-      phone: `+91 ${mobileNumber}`,
-      citizenId: "CIT-IND-000124",
+      name: name,
+      phone: email,
+      citizenId: registerRole === 'admin' ? "ADM-PAN-NEW" : "CIT-IND-NEW",
       ward: "Ward 5",
       village: "Kalyanpur Gram Panchayat",
-      role: "citizen"
+      role: registerRole
     });
 
     try {
@@ -62,218 +47,288 @@ export default function IdentityVerification() {
   };
 
   const handleProceed = () => {
-    navigate('/complaints');
+    if (registerRole === 'admin') {
+      navigate('/admin');
+    } else {
+      navigate('/complaints');
+    }
   };
 
   return (
-    <div style={{ backgroundColor: '#F7FAF8', minHeight: 'calc(100vh - 80px)', paddingBottom: '4rem' }}>
-      <div className="page-wrapper-sm">
-        {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <div style={{
-            width: '54px',
-            height: '54px',
-            borderRadius: '14px',
-            backgroundColor: '#E8F5EF',
-            color: '#087A55',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 1rem auto'
-          }}>
-            <ShieldCheck size={28} strokeWidth={2.4} />
-          </div>
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'linear-gradient(135deg, #0B192C 0%, #1A3636 100%)',
+      padding: '2rem',
+      fontFamily: '"Inter", sans-serif'
+    }}>
+      <div style={{
+        background: '#FFFFFF',
+        borderRadius: '24px',
+        padding: '3rem',
+        width: '100%',
+        maxWidth: '440px',
+        boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)',
+        position: 'relative'
+      }}>
+        {!isVerified ? (
+          <>
+            {/* Back Link */}
+            <Link to="/" style={{
+              position: 'absolute',
+              top: '2rem',
+              left: '2rem',
+              color: '#5A6D7C',
+              textDecoration: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              transition: 'color 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.color = '#1A3636'}
+            onMouseLeave={(e) => e.currentTarget.style.color = '#5A6D7C'}
+            >
+              <ArrowLeft size={16} /> {t(selectedLanguage, 'backToHome')}
+            </Link>
 
-          <h1 style={{
-            fontSize: '2rem',
-            fontWeight: 800,
-            color: '#102333',
-            marginBottom: '0.35rem',
-            letterSpacing: '-0.3px'
-          }}>
-            Verify Your Identity
-          </h1>
-          <p style={{ fontSize: '0.95rem', color: '#5A6D7C', fontWeight: 500 }}>
-            Secure Citizen Verification via Mobile OTP
-          </p>
-        </div>
+            {/* Header */}
+            <div style={{ textAlign: 'center', marginBottom: '2.5rem', marginTop: '1rem' }}>
+              <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#0B192C', margin: '0 0 0.5rem 0' }}>
+                {t(selectedLanguage, 'registerTitle')}
+              </h2>
+              <p style={{ color: '#5A6D7C', margin: 0, fontSize: '0.95rem', textTransform: 'capitalize' }}>
+                {t(selectedLanguage, 'registerSub', { role: registerRole })}
+              </p>
+            </div>
 
-        {/* VERIFICATION CARD */}
-        <div style={{
-          backgroundColor: '#FFFFFF',
-          border: '1px solid #DDE7E2',
-          borderRadius: '20px',
-          padding: '2.5rem 2rem',
-          boxShadow: '0 8px 24px rgba(16, 35, 51, 0.05)',
-          maxWidth: '520px',
-          margin: '0 auto'
-        }}>
-          {!isVerified ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-              {/* Step 1: Mobile Number Input */}
+            {/* Auth Toggle */}
+            <div style={{
+              display: 'flex',
+              background: '#F0F4F8',
+              borderRadius: '12px',
+              padding: '0.35rem',
+              marginBottom: '2rem'
+            }}>
+              <button
+                type="button"
+                onClick={() => navigate(`/login?role=${registerRole}`)}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#5A6D7C',
+                  fontWeight: 600,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: 'none'
+                }}
+              >
+                {t(selectedLanguage, 'loginTab')}
+              </button>
+              <button
+                type="button"
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: '#FFFFFF',
+                  color: '#1A3636',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                  cursor: 'default',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                }}
+              >
+                {t(selectedLanguage, 'registerTab')}
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {/* Full Name */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 700, color: '#102333', marginBottom: '0.5rem' }}>
-                  Enter Mobile Number
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#1A3636', marginBottom: '0.5rem' }}>
+                  {t(selectedLanguage, 'fullName')}
                 </label>
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
-                  <div style={{ position: 'relative', flex: 1 }}>
-                    <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#5A6D7C', fontSize: '0.9rem', fontWeight: 600 }}>
-                      +91
-                    </span>
-                    <input
-                      type="tel"
-                      value={mobileNumber}
-                      onChange={(e) => setMobileNumber(e.target.value)}
-                      placeholder="98765 43210"
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem 1rem 0.75rem 3rem',
-                        borderRadius: '10px',
-                        border: '1px solid #DDE7E2',
-                        fontSize: '0.95rem',
-                        color: '#102333',
-                        outline: 'none',
-                        backgroundColor: '#FFFFFF',
-                        fontWeight: 600
-                      }}
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleSendOtp}
-                    className="btn btn-outline-green"
-                    style={{ padding: '0.75rem 1.25rem', whiteSpace: 'nowrap', fontSize: '0.85rem' }}
-                  >
-                    {otpSent ? "RESEND OTP" : "SEND OTP"}
-                  </button>
+                <div style={{ position: 'relative' }}>
+                  <User size={18} color="#5A6D7C" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.85rem 1rem 0.85rem 2.75rem',
+                      borderRadius: '12px',
+                      border: '1.5px solid #E2EBE6',
+                      fontSize: '0.95rem',
+                      color: '#0B192C',
+                      outline: 'none',
+                      transition: 'border-color 0.2s',
+                      backgroundColor: '#FAFCFB'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#1A3636'}
+                    onBlur={(e) => e.target.style.borderColor = '#E2EBE6'}
+                  />
                 </div>
               </div>
 
-              {/* Step 2: OTP Input Boxes */}
-              {otpSent && (
-                <div style={{
-                  backgroundColor: '#F8FAF9',
-                  border: '1px solid #E2EBE6',
-                  borderRadius: '14px',
-                  padding: '1.5rem',
-                  animation: 'pulseWave 0.3s ease-out'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
-                    <label style={{ fontSize: '0.88rem', fontWeight: 700, color: '#102333' }}>
-                      Enter OTP
-                    </label>
-                    <span style={{ fontSize: '0.78rem', color: '#087A55', fontWeight: 600 }}>
-                      Demo OTP pre-filled
-                    </span>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '1.25rem' }}>
-                    {otp.map((digit, index) => (
-                      <input
-                        key={index}
-                        ref={(el) => (inputRefs.current[index] = el)}
-                        type="text"
-                        maxLength={1}
-                        value={digit}
-                        onChange={(e) => handleOtpChange(index, e.target.value)}
-                        onKeyDown={(e) => handleKeyDown(index, e)}
-                        style={{
-                          width: '44px',
-                          height: '50px',
-                          borderRadius: '8px',
-                          border: '2px solid #087A55',
-                          textAlign: 'center',
-                          fontSize: '1.25rem',
-                          fontWeight: 800,
-                          color: '#102333',
-                          backgroundColor: '#FFFFFF',
-                          outline: 'none'
-                        }}
-                      />
-                    ))}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleVerify}
-                    className="btn btn-primary btn-full"
+              {/* Email */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#1A3636', marginBottom: '0.5rem' }}>
+                  {t(selectedLanguage, 'email')}
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Mail size={18} color="#5A6D7C" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     style={{
-                      padding: '0.85rem',
-                      fontWeight: 800,
+                      width: '100%',
+                      padding: '0.85rem 1rem 0.85rem 2.75rem',
+                      borderRadius: '12px',
+                      border: '1.5px solid #E2EBE6',
                       fontSize: '0.95rem',
-                      boxShadow: '0 4px 14px rgba(8, 122, 85, 0.25)'
+                      color: '#0B192C',
+                      outline: 'none',
+                      transition: 'border-color 0.2s',
+                      backgroundColor: '#FAFCFB'
                     }}
-                  >
-                    VERIFY & CONTINUE
-                  </button>
+                    onFocus={(e) => e.target.style.borderColor = '#1A3636'}
+                    onBlur={(e) => e.target.style.borderColor = '#E2EBE6'}
+                  />
                 </div>
-              )}
+              </div>
+
+              {/* Password */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#1A3636', marginBottom: '0.5rem' }}>
+                  {t(selectedLanguage, 'password')}
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Lock size={18} color="#5A6D7C" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.85rem 1rem 0.85rem 2.75rem',
+                      borderRadius: '12px',
+                      border: '1.5px solid #E2EBE6',
+                      fontSize: '0.95rem',
+                      color: '#0B192C',
+                      outline: 'none',
+                      transition: 'border-color 0.2s',
+                      backgroundColor: '#FAFCFB'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#1A3636'}
+                    onBlur={(e) => e.target.style.borderColor = '#E2EBE6'}
+                  />
+                </div>
+              </div>
+
+              {/* REGISTER Button */}
+              <button
+                type="submit"
+                style={{
+                  width: '100%',
+                  padding: '0.9rem',
+                  background: 'linear-gradient(to right, #1A3636, #0B192C)',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontWeight: 700,
+                  fontSize: '1rem',
+                  letterSpacing: '0.5px',
+                  cursor: 'pointer',
+                  marginTop: '0.5rem',
+                  boxShadow: '0 8px 20px rgba(26, 54, 54, 0.3)',
+                  transition: 'transform 0.1s, box-shadow 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                onMouseDown={(e) => e.currentTarget.style.transform = 'translateY(1px)'}
+                onMouseUp={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+              >
+                {t(selectedLanguage, 'createAccountBtn')}
+              </button>
+            </form>
+
+          </>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '2rem 0' }}>
+            <div style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              backgroundColor: '#E8F6EF',
+              color: '#1A3636',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1.5rem auto',
+              boxShadow: '0 8px 24px rgba(26, 54, 54, 0.15)'
+            }}>
+              <CheckCircle2 size={48} strokeWidth={2.5} />
             </div>
-          ) : (
-            /* SUCCESS CARD */
-            <div style={{ textAlign: 'center', padding: '1rem 0' }}>
-              <div style={{
-                width: '64px',
-                height: '64px',
-                borderRadius: '50%',
-                backgroundColor: '#E8F6EF',
-                color: '#087A55',
+
+            <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0B192C', marginBottom: '0.5rem' }}>
+              {t(selectedLanguage, 'registeredSuccess')}
+            </h2>
+            <p style={{ fontSize: '1rem', color: '#5A6D7C', marginBottom: '2rem' }}>
+              Welcome, {name}
+            </p>
+
+            <button
+              type="button"
+              onClick={handleProceed}
+              style={{
+                width: '100%',
+                padding: '0.9rem',
+                background: 'linear-gradient(to right, #1A3636, #0B192C)',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '12px',
+                fontWeight: 700,
+                fontSize: '1rem',
+                letterSpacing: '0.5px',
+                cursor: 'pointer',
+                boxShadow: '0 8px 20px rgba(26, 54, 54, 0.3)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                margin: '0 auto 1.25rem auto',
-                boxShadow: '0 4px 14px rgba(8, 122, 85, 0.25)'
-              }}>
-                <CheckCircle2 size={36} strokeWidth={2.6} />
-              </div>
-
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#102333', marginBottom: '0.25rem' }}>
-                Identity Verified Successfully!
-              </h2>
-
-              <p style={{ fontSize: '0.88rem', color: '#5A6D7C', marginBottom: '1.5rem' }}>
-                Your unique citizen ID
-              </p>
-
-              {/* Large Citizen ID Badge */}
-              <div style={{
-                backgroundColor: '#F3FAF6',
-                border: '2px dashed #087A55',
-                borderRadius: '12px',
-                padding: '1rem 1.5rem',
-                display: 'inline-block',
-                marginBottom: '2rem'
-              }}>
-                <div style={{
-                  fontSize: '1.6rem',
-                  fontWeight: 900,
-                  color: '#087A55',
-                  letterSpacing: '1px',
-                  fontFamily: 'monospace'
-                }}>
-                  CIT-IND-000124
-                </div>
-              </div>
-
-              {/* Green Proceed to Dashboard button */}
-              <button
-                type="button"
-                onClick={handleProceed}
-                className="btn btn-primary btn-full"
-                style={{
-                  padding: '0.9rem',
-                  fontWeight: 800,
-                  fontSize: '0.95rem',
-                  letterSpacing: '0.5px',
-                  boxShadow: '0 4px 16px rgba(8, 122, 85, 0.3)'
-                }}
-              >
-                PROCEED TO DASHBOARD
-                <ArrowRight size={18} />
-              </button>
-            </div>
-          )}
-        </div>
+                gap: '0.5rem',
+                transition: 'transform 0.1s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+            >
+              {t(selectedLanguage, 'proceedDashboard')}
+              <ArrowRight size={18} />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
